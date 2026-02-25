@@ -1,12 +1,15 @@
-import time
 import numpy as np
 import board
 import busio
 import digitalio
 import adafruit_max31865
 import adafruit_adxl34x
+import serial
+import threading
+import time
 from master_feature_extractor import extract_all_features
 from csv_writer import write_features_to_csv
+
 
 #sensor_logging_loop.py starts
 #│
@@ -56,8 +59,48 @@ accelerometer = adafruit_adxl34x.ADXL345(i2c)
 accelerometer.range = adafruit_adxl34x.Range.RANGE_16_G
 
 # ========================
+# USB CDC – STM32
+# ========================
+SERIAL_PORT = "/dev/ttyACM0"   # adjust if needed
+BAUDRATE = 115200
+
+ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=0.1)
+
+latest_vce = 0.0
+latest_ic = 0.0
+lock = threading.Lock()
+
+
+
+
+# ========================
 # SENSOR READ FUNCTIONS
 # ========================
+def stm32_reader():
+    global latest_vce, latest_ic
+
+    while True:
+        try:
+            line = ser.readline().decode("utf-8").strip()
+            if not line:
+                continue
+
+            # Expected format: "12.34, 5.67"
+            parts = line.split(",")
+            if len(parts) != 2:
+                continue
+            vce_str, ic_str = parts
+
+            with lock:
+                latest_vce = float(vce_str)
+                latest_ic = float(ic_str)
+
+        except Exception:
+            continue
+
+# Start reader thread ONCE
+threading.Thread(target=stm32_reader, daemon=True).start()
+
 def read_pt100():
     return pt100.temperature
 
@@ -69,13 +112,15 @@ def read_adxl345():
     g = 9.80665
     return ax / g, ay / g, az / g
 
-# PLACEHOLDERS (until ADC added)
+# Voltage and Current Sensors (ADCs)
 def read_vce():
-    return 0.0
+    with lock:
+        return latest_vce
 
 
 def read_current():
-    return 0.0
+    with lock:
+        return latest_ic
 
 # ========================
 # DATA BUFFER
@@ -88,54 +133,49 @@ data_buffer = {
 }
 
 # ========================
+# PROCESS ONE WINDOW
+# ========================
+def process_window(buffer):
+    data_np = {k: np.array(v) for k, v in buffer.items()}
+
+    # Equal length + NaN safety
+    n = min(len(v) for v in data_np.values())
+    for key in data_np:
+        data_np[key] = np.nan_to_num(data_np[key][:n])
+
+    features = extract_all_features(data_np, fs=FS)
+    features["timestamp"] = time.time()
+    features["HealthState"] = "Healthy"
+
+    write_features_to_csv(features)
+
+# ========================
 # LOG ONE SAMPLE
 # ========================
 def log_sensors():
-    # Replace with real sensor reads
-    temp = read_pt100()
-    ax, ay, az = read_adxl345()
-    vce = read_vce()
-    ic = read_current()
+     data_buffer["temp"].append(read_pt100())
 
-    data_buffer["temp"].append(temp)
-    data_buffer["ax"].append(ax)
-    data_buffer["ay"].append(ay)
-    data_buffer["az"].append(az)
-    data_buffer["vce"].append(vce)
-    data_buffer["ic"].append(ic)
+     ax, ay, az = read_adxl345()
+     data_buffer["ax"].append(ax)
+     data_buffer["ay"].append(ay)
+     data_buffer["az"].append(az)
 
-    # ========================
-    # PROCESS ONE WINDOW
-    # ========================
-    def process_window(buffer):
-        data_np = {k: np.array(v) for k, v in buffer.items()}
+     data_buffer["vce"].append(read_vce())
+     data_buffer["ic"].append(read_current())
 
-        # Equal length + NaN safety
-        n = min(len(v) for v in data_np.values())
-        for key in data_np:
-            data_np[key] = np.nan_to_num(data_np[key][:n])
-
-        features = extract_all_features(data_np, fs=FS)
-        features["timestamp"] = time.time()
-        features["HealthState"] = "Healthy"
-
-        write_features_to_csv(features)
-
-        # ========================
-        # MAIN REAL-TIME LOOP
-        # ========================
-    while True:
+# ========================
+# MAIN REAL-TIME LOOP
+# ========================
+while True:
         start = time.perf_counter()
 
         log_sensors()
 
         if len(data_buffer["temp"]) >= N_SAMPLES:
             process_window(data_buffer)
-
-            # Clear buffer
             for k in data_buffer:
                 data_buffer[k].clear()
 
+
         elapsed = time.perf_counter() - start
-        sleep_time = max(0.0, (1.0 / FS) - elapsed)
-        time.sleep(sleep_time)
+        time.sleep(max(0.0, (1.0 / FS) - elapsed))

@@ -26,10 +26,10 @@ def extract_vce_features(vce, fs):
     vce_mean = np.mean(vce_smooth)
 
     return {
-        "vce_mean": vce_mean,
-        "vce_max": np.max(vce_smooth),
+        "vce_mean": vce_mean, # Average operating voltage
+        "vce_max": np.max(vce_smooth), # Stress extremes
         "vce_min": np.min(vce_smooth),
-        "vce_std": np.std(vce_smooth),
-        "max_dv_dt": np.max(np.abs(dv_dt)),
-        "vce_overshoot": np.max(vce_smooth) - vce_mean
+        "vce_std": np.std(vce_smooth), # Ripple / noise
+        "max_dv_dt": np.max(np.abs(dv_dt)), # Switching stress
+        "vce_overshoot": np.max(vce_smooth) - vce_mean # Transient overshoot detection
     }
