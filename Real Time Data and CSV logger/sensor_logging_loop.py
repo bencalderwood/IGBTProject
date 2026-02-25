@@ -9,6 +9,7 @@ import threading
 import time
 from master_feature_extractor import extract_all_features
 from csv_writer import write_features_to_csv
+from database_logger import log_features_to_db
 
 
 #sensor_logging_loop.py starts
@@ -133,7 +134,7 @@ data_buffer = {
 }
 
 # ========================
-# PROCESS ONE WINDOW
+# PROCESS ONE WINDOW AND WRITE FEATURES TO CSV. FILE AND DATABASE
 # ========================
 def process_window(buffer):
     data_np = {k: np.array(v) for k, v in buffer.items()}
@@ -148,6 +149,7 @@ def process_window(buffer):
     features["HealthState"] = "Healthy"
 
     write_features_to_csv(features)
+    log_features_to_db(features)
 
 # ========================
 # LOG ONE SAMPLE
