@@ -9,7 +9,7 @@ import threading
 import time
 from master_feature_extractor import extract_all_features
 from csv_writer import write_features_to_csv
-from database_logger import log_features_to_db
+#from database_logger import log_features_to_db
 
 
 #sensor_logging_loop.py starts
@@ -37,7 +37,7 @@ WINDOW_SEC = 1.0
 N_SAMPLES = int(FS * WINDOW_SEC)
 
 # ========================
-# SPI – PT100 (MAX31865)
+# SPI – PT100 Temperature Sensor (MAX31865)
 # ========================
 spi = board.SPI()
 cs = digitalio.DigitalInOut(board.D5)
@@ -45,13 +45,13 @@ cs = digitalio.DigitalInOut(board.D5)
 pt100 = adafruit_max31865.MAX31865(
     spi,
     cs,
-    wires=3,           # change if 2-wire or 4-wire
+    wires=3,
     rtd_nominal=100,
     ref_resistor=430
 )
 
 # ========================
-# I2C – ADXL345
+# I2C – Accelerometer (ADXL345)
 # ========================
 i2c = busio.I2C(board.SCL, board.SDA)
 accelerometer = adafruit_adxl34x.ADXL345(i2c)
@@ -87,10 +87,12 @@ def stm32_reader():
                 continue
 
             # Expected format: "12.34, 5.67"
+            line = line.replace("V=", "").replace(" V", "")
+            line = line.replace("I=", "").replace(" A", "")
             parts = line.split(",")
-            if len(parts) != 2:
-                continue
-            vce_str, ic_str = parts
+
+            vce_str = parts[0].strip()
+            ic_str = parts[1].strip()
 
             with lock:
                 latest_vce = float(vce_str)
@@ -123,6 +125,9 @@ def read_current():
     with lock:
         return latest_ic
 
+print(f"Temperature: {pt100.temperature:.2f} C")
+print(f"Accelerometer: {ax / g, ay / g, az / g:.2f} g")
+print(f"Vce: {latest_vce:.2f} V  Ic: {latest_ic:.2f} A")
 # ========================
 # DATA BUFFER
 # ========================
@@ -149,7 +154,7 @@ def process_window(buffer):
     features["HealthState"] = "Healthy"
 
     write_features_to_csv(features)
-    log_features_to_db(features)
+    #log_features_to_db(features)
 
 # ========================
 # LOG ONE SAMPLE
@@ -169,6 +174,7 @@ def log_sensors():
 # MAIN REAL-TIME LOOP
 # ========================
 while True:
+
         start = time.perf_counter()
 
         log_sensors()
@@ -178,6 +184,15 @@ while True:
             for k in data_buffer:
                 data_buffer[k].clear()
 
+        # print latest logged values
+        print(f"Temperature: {data_buffer['temp'][-1]:.2f} C")
+
+        ax = data_buffer["ax"][-1]
+        ay = data_buffer["ay"][-1]
+        az = data_buffer["az"][-1]
+        print(f"Accelerometer: X={ax:.2f} g  Y={ay:.2f} g  Z={az:.2f} g")
+
+        print(f"Vce: {data_buffer['vce'][-1]:.2f} V  Ic: {data_buffer['current'][-1]:.2f} A")
 
         elapsed = time.perf_counter() - start
         time.sleep(max(0.0, (1.0 / FS) - elapsed))

@@ -59,5 +59,5 @@ def extract_fft_features(signal, fs):
         "fft_peak_freq": freqs[peak_idx],
         "fft_peak_amp": fft_vals[peak_idx],
         "fft_energy": np.mean(fft_vals**2),
-        "fft_band_energy_100_1500": band_energy
+        "fft_band_energy_100_1500Hz": band_energy
     }
