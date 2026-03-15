@@ -35,6 +35,8 @@ from csv_writer import write_features_to_csv
 FS = 200                # Hz
 WINDOW_SEC = 1.0
 N_SAMPLES = int(FS * WINDOW_SEC)
+last_print_time = 0
+PRINT_INTERVAL = 0.5
 
 # ========================
 # SPI – PT100 Temperature Sensor (MAX31865)
@@ -105,15 +107,19 @@ def stm32_reader():
 threading.Thread(target=stm32_reader, daemon=True).start()
 
 def read_pt100():
-    return pt100.temperature
+    try:
+     return pt100.temperature
+    except Exception:
+     return 0.0
 
 
 def read_adxl345():
-    """Read accelerometer in g"""
-    ax, ay, az = accelerometer.acceleration
-    # ADXL345 library returns m/s² → convert to g
-    g = 9.80665
-    return ax / g, ay / g, az / g
+    try:
+        ax, ay, az = accelerometer.acceleration
+        g = 9.80665
+        return ax/g, ay/g, az/g
+    except Exception:
+        return 0.0, 0.0, 0.0
 
 # Voltage and Current Sensors (ADCs)
 def read_vce():
@@ -125,9 +131,6 @@ def read_current():
     with lock:
         return latest_ic
 
-print(f"Temperature: {pt100.temperature:.2f} C")
-print(f"Accelerometer: {ax / g, ay / g, az / g:.2f} g")
-print(f"Vce: {latest_vce:.2f} V  Ic: {latest_ic:.2f} A")
 # ========================
 # DATA BUFFER
 # ========================
@@ -183,16 +186,23 @@ while True:
             process_window(data_buffer)
             for k in data_buffer:
                 data_buffer[k].clear()
+        # Print Sensor readings
+        current_time = time.perf_counter()
 
-        # print latest logged values
-        print(f"Temperature: {data_buffer['temp'][-1]:.2f} C")
+        if current_time - last_print_time >= PRINT_INTERVAL:
 
-        ax = data_buffer["ax"][-1]
-        ay = data_buffer["ay"][-1]
-        az = data_buffer["az"][-1]
-        print(f"Accelerometer: X={ax:.2f} g  Y={ay:.2f} g  Z={az:.2f} g")
+            if data_buffer["temp"]:
+                print(f"Temperature: {data_buffer['temp'][-1]:.2f} C")
 
-        print(f"Vce: {data_buffer['vce'][-1]:.2f} V  Ic: {data_buffer['current'][-1]:.2f} A")
+                ax = data_buffer["ax"][-1]
+                ay = data_buffer["ay"][-1]
+                az = data_buffer["az"][-1]
+                print(f"Accelerometer: X={ax:.2f} g  Y={ay:.2f} g  Z={az:.2f} g")
+
+                print(f"Vce: {data_buffer['vce'][-1]:.2f} V  Ic: {data_buffer['ic'][-1]:.2f} A")
+                print("-------------------------")
+
+            last_print_time = current_time
 
         elapsed = time.perf_counter() - start
         time.sleep(max(0.0, (1.0 / FS) - elapsed))
