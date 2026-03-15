@@ -1,12 +1,6 @@
 import numpy as np
-import board
-import busio
-import digitalio
-import adafruit_max31865
-import adafruit_adxl34x
-import serial
-import threading
 import time
+import random
 from master_feature_extractor import extract_all_features
 from csv_writer import write_features_to_csv
 #from database_logger import log_features_to_db
@@ -41,37 +35,37 @@ PRINT_INTERVAL = 0.5
 # ========================
 # SPI – PT100 Temperature Sensor (MAX31865)
 # ========================
-spi = board.SPI()
-cs = digitalio.DigitalInOut(board.D5)
+#spi = board.SPI()
+#cs = digitalio.DigitalInOut(board.D5)
 
-pt100 = adafruit_max31865.MAX31865(
-    spi,
-    cs,
-    wires=3,
-    rtd_nominal=100,
-    ref_resistor=430
-)
+#pt100 = adafruit_max31865.MAX31865(
+ #   spi,
+  #  cs,
+   # wires=3,
+    #rtd_nominal=100,
+    #ref_resistor=430
+#)
 
 # ========================
 # I2C – Accelerometer (ADXL345)
 # ========================
-i2c = busio.I2C(board.SCL, board.SDA)
-accelerometer = adafruit_adxl34x.ADXL345(i2c)
+#i2c = busio.I2C(board.SCL, board.SDA)
+#accelerometer = adafruit_adxl34x.ADXL345(i2c)
 
 # Optional: set range for vibration
-accelerometer.range = adafruit_adxl34x.Range.RANGE_16_G
+#accelerometer.range = adafruit_adxl34x.Range.RANGE_16_G
 
 # ========================
 # USB CDC – STM32
 # ========================
-SERIAL_PORT = "/dev/ttyACM0"   # adjust if needed
-BAUDRATE = 115200
+#SERIAL_PORT = "/dev/ttyACM0"   # adjust if needed
+#BAUDRATE = 115200
 
-ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=0.1)
+#ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=0.1)
 
-latest_vce = 0.0
-latest_ic = 0.0
-lock = threading.Lock()
+#latest_vce = 0.0
+#latest_ic = 0.0
+#lock = threading.Lock()
 
 
 
@@ -79,65 +73,58 @@ lock = threading.Lock()
 # ========================
 # SENSOR READ FUNCTIONS
 # ========================
-def stm32_reader():
-    global latest_vce, latest_ic
+#def stm32_reader():
+ #   global latest_vce, latest_ic
 
-    while True:
-        try:
-            line = ser.readline().decode("utf-8").strip()
-            if not line:
-                continue
+  #  while True:
+   #     try:
+    #        line = ser.readline().decode("utf-8").strip()
+     #       if not line:
+      #          continue
 
             # Expected format: "12.34, 5.67"
-            line = line.replace("V=", "").replace(" V", "")
-            line = line.replace("I=", "").replace(" A", "")
-            parts = line.split(",")
+       #     line = line.replace("V=", "").replace(" V", "")
+        #    line = line.replace("I=", "").replace(" A", "")
+         #   parts = line.split(",")
 
-            vce_str = parts[0].strip()
-            ic_str = parts[1].strip()
+          #  vce_str = parts[0].strip()
+           # ic_str = parts[1].strip()
 
-            with lock:
-                latest_vce = float(vce_str)
-                latest_ic = float(ic_str)
+            #with lock:
+             #   latest_vce = float(vce_str)
+              #  latest_ic = float(ic_str)
 
-        except Exception:
-            continue
+        #except Exception:
+         #   continue
 
 # Start reader thread ONCE
-threading.Thread(target=stm32_reader, daemon=True).start()
+#threading.Thread(target=stm32_reader, daemon=True).start()
 
 def read_pt100():
-    try:
-     temp = pt100.temperature
-     return temp
-    except Exception:
-     return 0.0
+    temp = random.uniform(18.0,35.0)
+    return temp
 
 
 def read_adxl345():
-    try:
-        ax, ay, az = accelerometer.acceleration
-        g = 9.80665
+     ax = random.uniform(-2.0,2.0)
+     ay = random.uniform(-2.0,2.0)
+     az = random.uniform(-2.0,2.0)
+     return ax,ay,az
 
-        ax = ax / g
-        ay = ay / g
-        az = az / g
+ax, ay, az = read_adxl345()
 
-        return ax, ay, az
-    except Exception:
-        return 0.0, 0.0, 0.0
 
 # Voltage and Current Sensors (ADCs)
 def read_vce():
-    with lock:
-        vce = latest_vce
+    vce = random.uniform(0.0,15.0)
     return vce
 
 
+
 def read_current():
-    with lock:
-        ic = latest_ic
+    ic = random.uniform(0.0, 3.0)
     return ic
+
 
 # ========================
 # DATA BUFFER
@@ -205,7 +192,7 @@ while True:
                 ax = data_buffer["ax"][-1]
                 ay = data_buffer["ay"][-1]
                 az = data_buffer["az"][-1]
-                print(f"Accelerometer: X={ax:.2f} g  Y={ay:.2f} g  Z={az:.2f} g")
+                print(f"Accelerometer: X= {ax:.2f} g  Y={ay:.2f} g  Z={az:.2f} g")
 
                 print(f"Vce: {data_buffer['vce'][-1]:.2f} V  Ic: {data_buffer['ic'][-1]:.2f} A")
                 print("-------------------------")
