@@ -26,7 +26,7 @@ from csv_writer import write_features_to_csv
 # ========================
 # CONFIG
 # ========================
-FS = 200                # Hz
+FS = 500               # Hz
 WINDOW_SEC = 1.0
 N_SAMPLES = int(FS * WINDOW_SEC)
 last_print_time = 0
@@ -150,6 +150,7 @@ def process_window(buffer):
     features = extract_all_features(data_np, fs=FS)
     features["timestamp"] = time.time()
     features["HealthState"] = "Healthy"
+    features["FaultType"] = "None"
 
     write_features_to_csv(features)
     #log_features_to_db(features)

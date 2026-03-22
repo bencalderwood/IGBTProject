@@ -13,6 +13,7 @@ def extract_vibration_features(ax, ay, az):
     n = min(len(ax), len(ay), len(az))
     if n == 0:
         return {
+            "vib_magnitude": 0,
             "vib_rms": 0,
             "vib_peak": 0,
             "vib_std": 0,
@@ -27,6 +28,7 @@ def extract_vibration_features(ax, ay, az):
     std = np.std(mag) + 1e-8
 
     return {
+        "vib_magnitude": mag[-1],
         "vib_rms": rms,
         "vib_peak": np.max(np.abs(mag)),
         "vib_std": std,
@@ -42,7 +44,7 @@ def extract_fft_features(signal, fs):
             "fft_peak_freq": 0,
             "fft_peak_amp": 0,
             "fft_energy": 0,
-            "fft_band_energy_100_1500": 0
+            "fft_band_energy_100_500Hz": 0
         }
 
     signal = signal - np.mean(signal)
@@ -50,7 +52,7 @@ def extract_fft_features(signal, fs):
     fft_vals = np.abs(rfft(signal))
     freqs = rfftfreq(len(signal), 1/fs)
 
-    band = (freqs > 100) & (freqs < 1500)
+    band = (freqs > 100) & (freqs < 500)
     band_energy = np.sum(fft_vals[band] ** 2)
 
     peak_idx = np.argmax(fft_vals[1:]) + 1
@@ -59,5 +61,5 @@ def extract_fft_features(signal, fs):
         "fft_peak_freq": freqs[peak_idx],
         "fft_peak_amp": fft_vals[peak_idx],
         "fft_energy": np.mean(fft_vals**2),
-        "fft_band_energy_100_1500Hz": band_energy
+        "fft_band_energy_100_500Hz": band_energy
     }

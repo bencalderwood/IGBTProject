@@ -10,6 +10,7 @@ def extract_power_features(vce, ic):
 
     if n == 0:
         return {
+            "p_inst": 0,
             "p_mean": 0,
             "p_peak": 0,
             "p_std": 0
@@ -19,6 +20,7 @@ def extract_power_features(vce, ic):
     p_inst = np.abs(vce * ic)
 
     return {
+        "p_instantaneous": p_inst[-1],
         "p_mean": np.mean(p_inst),
         "p_peak": np.max(p_inst),
         "p_std": np.std(p_inst)

@@ -6,6 +6,7 @@ def extract_current_features(ic, fs):
 
     if len(ic) < 2:
         return {
+            "Ic": 0,
             "ic_mean": 0,
             "ic_rms": 0,
             "ic_peak": 0,
@@ -24,9 +25,10 @@ def extract_current_features(ic, fs):
     di_dt = np.gradient(ic_smooth) * fs
 
     return {
-        "ic_mean": np.mean(ic_smooth),
-        "ic_rms": np.sqrt(np.mean(ic_smooth ** 2)),
-        "ic_peak": np.max(np.abs(ic_smooth)),
-        "ic_std": np.std(ic_smooth),
+        "Ic": ic[-1],
+        "ic_mean": np.mean(ic),
+        "ic_rms": np.sqrt(np.mean(ic ** 2)),
+        "ic_peak": np.max(np.abs(ic)),
+        "ic_std": np.std(ic),
         "max_di_dt": np.max(np.abs(di_dt))
     }
