@@ -75,7 +75,6 @@ lock = threading.Lock()
 
 
 
-
 # ========================
 # SENSOR READ FUNCTIONS
 # ========================
@@ -206,7 +205,10 @@ while True:
                 ax = data_buffer["ax"][-1]
                 ay = data_buffer["ay"][-1]
                 az = data_buffer["az"][-1]
+                mag = np.sqrt(ax ** 2 + ay ** 2 + az ** 2)
+
                 print(f"Accelerometer: X={ax:.6f} g  Y={ay:.6f} g  Z={az:.6f} g")
+                print(f"Accelerometer magnitude: mag= {mag:.6f}")
 
                 print(f"Vce: {data_buffer['vce'][-1]:.2f} V  Ic: {data_buffer['ic'][-1]:.2f} A")
                 print("-------------------------")

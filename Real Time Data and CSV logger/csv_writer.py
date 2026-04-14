@@ -2,7 +2,7 @@ import csv
 import os
 
 
-CSV_FILE = "igbt_features.csv"
+CSV_FILE = "igbt_features2.csv"
 HEADER_WRITTEN = False
 
 

@@ -13,7 +13,7 @@ def extract_all_features(data, fs):
     # Ensures equal length and remove NaNs from sensor data
     n = min(len(v) for v in data.values())
     for k in data:
-        data[k] = np.nan_to_num(data[k][:n])
+     data[k] = np.nan_to_num(data[k][:n])
 
     features = {}
 

@@ -4,10 +4,11 @@ db = MySQLdb.connect(
     host="localhost",
     user="Dylan",
     password="fredstar321@",
-    db="All_Sensors"
+    db="All_Sensors"       # change to name of utilised SQL Database
 )
 cursor = db.cursor()
 
+# logs extracted features to SQL Database
 def log_features_to_db(features):
     cursor.execute(
         """

@@ -111,7 +111,7 @@ def read_adxl345():
      az = random.uniform(-2.0,2.0)
      return ax,ay,az
 
-ax, ay, az = read_adxl345()
+     ax, ay, az = read_adxl345()
 
 
 # Voltage and Current Sensors (ADCs)
@@ -145,10 +145,11 @@ def process_window(buffer):
     # Equal length + NaN safety
     n = min(len(v) for v in data_np.values())
     for key in data_np:
-        data_np[key] = np.nan_to_num(data_np[key][:n])
+     data_np[key] = np.nan_to_num(data_np[key][:n])
 
     features = extract_all_features(data_np, fs=FS)
     features["timestamp"] = time.time()
+    features["DC_supply_voltage"] = 15
     features["HealthState"] = "Healthy"
     features["FaultType"] = "None"
 
@@ -193,7 +194,10 @@ while True:
                 ax = data_buffer["ax"][-1]
                 ay = data_buffer["ay"][-1]
                 az = data_buffer["az"][-1]
+                mag = np.sqrt(ax ** 2 + ay ** 2 + az ** 2)
+
                 print(f"Accelerometer: X= {ax:.6f} g  Y={ay:.6f} g  Z={az:.6f} g")
+                print(f"Accelerometer magnitude: mag= {mag:.6f}")
 
                 print(f"Vce: {data_buffer['vce'][-1]:.2f} V  Ic: {data_buffer['ic'][-1]:.2f} A")
                 print("-------------------------")
